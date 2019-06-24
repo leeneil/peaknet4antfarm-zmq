@@ -10,6 +10,7 @@ import torch
 from peaknet import Peaknet
 from peaknet_utils import *
 from antfarm_utils import *
+from tensorboardX import SummaryWriter
 
 
 class Trainer(object):
@@ -26,6 +27,7 @@ class Trainer(object):
         self.delta = 0
         self.psana_ready = False
         self.cxi_ready = False
+        self.writer = SummaryWriter( "runs/"+params["project_name"] )
     
     def get_train_list(self):
         if self.params["build_train_list"]:
@@ -51,7 +53,7 @@ class Trainer(object):
         else:
             self.net.model = model
         self.net.model.cuda()
-        self.net.set_writer(project_name=self.params["project_name"], parameters=self.params)
+        #self.net.set_writer(project_name=self.params["project_name"], parameters=self.params)
 
     def get_grads(self):
         return self.net.getGrad()
@@ -101,7 +103,7 @@ class Trainer(object):
                 overall_recall += n * my_recall
                 seen += n
         overall_recall /= (1.0*seen)
-        self.net.writer.add_scalar('recall_val', overall_recall, self.net.model.seen)
+        self.writer.add_scalar('recall_val', overall_recall, self.net.model.seen)
         print("----------------------------------------- END VAL -----------------------------------------")
 
     def train(self):

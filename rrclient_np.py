@@ -18,7 +18,7 @@ from trainer import Trainer
 
 ### Trainer setup ###
 
-project_name = "runs/antfarm_zmq/1cls/ada/lr_0.001"
+project_name = "runs/antfarm_zmq_b/1cls/ada/lr_0.001"
 n_save = 10240 * 32
 n_check = 128 * 32
 n_policy = [32*200000, 32*400000, 32*800000]

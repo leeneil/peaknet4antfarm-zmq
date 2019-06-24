@@ -14,7 +14,7 @@ from peaknet import Peaknet
 from peaknet_utils import *
 from antfarm_utils import *
 
-n_validate = 120 
+n_validate = 60 
 
 ### Peaknet setup ###
 
