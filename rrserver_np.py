@@ -14,7 +14,7 @@ from peaknet import Peaknet
 from peaknet_utils import *
 from antfarm_utils import *
 
-n_validate = 60 
+n_validate = 60 # period of validation 
 
 ### Peaknet setup ###
 
@@ -33,11 +33,10 @@ socket.bind("tcp://*:5556")
 while True:
     #  Wait for next request from client
     message = socket.recv_pyobj()
-    grads, delta = message
-    print("Received request. delta:", delta)
-    #time.sleep (np.random.uniform(0,0.01))
-    if delta > 0:
-        net.set_optimizer(adagrad=True)
+    grads, delta = message # 'messsage' always has two components
+    print("Received request. delta:", delta) # let's not to print out the grads
+    if delta > 0: # delta = 
+        net.set_optimizer(adagrad=True) # number of images trained in the last iteration
         net.updateGrad(grads=grads, delta=delta, useGPU=False)
         net.optimize()
     print("imgs seen:", net.model.seen)
