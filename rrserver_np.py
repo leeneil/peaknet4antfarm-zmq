@@ -10,8 +10,8 @@ import h5py
 import time
 import psana
 import torch
-from peaknet import Peaknet
-from peaknet_utils import *
+from peaknet.Peaknet import Peaknet
+from peaknet.peaknet_utils import *
 from antfarm_utils import *
 
 n_validate = 60 # period of validation 
@@ -19,7 +19,7 @@ n_validate = 60 # period of validation
 ### Peaknet setup ###
 
 net = Peaknet()
-net.loadCfg( "/reg/neh/home/liponan/ai/pytorch-yolo2/cfg/newpeaksv10-asic.cfg" )
+net.loadCfg( "/reg/d/psdm/cxi/cxic0415/res/liponan/peaknet4antfarm/newpeaksv10-asic.cfg" )
 net.init_model()
 net.model
 print("done model setup")

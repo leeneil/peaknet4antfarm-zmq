@@ -7,7 +7,7 @@ import h5py
 import time
 import psana
 import torch
-from peaknet import Peaknet
+from peaknet.Peaknet import Peaknet
 from peaknet_utils import *
 from antfarm_utils import *
 from tensorboardX import SummaryWriter
@@ -31,11 +31,11 @@ class Trainer(object):
     
     def get_train_list(self):
         if self.params["build_train_list"]:
-            self.df_train = get_train_df( cxi_path="/reg/d/psdm/cxi/cxitut13/res/autosfx", 
+            self.df_train = get_train_df( cxi_path="/reg/d/psdm/cxi/cxitut13/res/autosfx/output", 
                                   val_csv="/reg/d/psdm/cxi/cxic0415/res/liponan/peaknet4antfarm/df_val.csv",
                                   test_csv="/reg/d/psdm/cxi/cxic0415/res/liponan/peaknet4antfarm/df_test.csv")
         else:
-            self.df_train = pd.read_csv("/reg/d/psdm/cxi/cxic0415/res/liponan/peaknet4antfarm/df_train.csv", index_col=0)
+            self.df_train = pd.read_csv("/reg/d/psdm/cxi/cxic0415/res/liponan/peaknet4antfarm/df_val.csv", index_col=0)
         print("training list", len(self.df_train))
         
     def get_val_list(self, n=1000):
@@ -47,7 +47,7 @@ class Trainer(object):
         
     def setup_peaknet(self, model=None):
         self.net = Peaknet()
-        self.net.loadCfg( "/reg/neh/home/liponan/ai/pytorch-yolo2/cfg/newpeaksv10-asic.cfg" )
+        self.net.loadCfg( "/reg/d/psdm/cxi/cxic0415/res/liponan/peaknet4antfarm/newpeaksv10-asic.cfg" )
         if model is None:
             self.net.init_model()
         else:
@@ -71,21 +71,17 @@ class Trainer(object):
                 det = psana.Detector('DscCsPad')
                 this_run = ds.runs().next()
                 times = this_run.times()
-                print("*********************** {}-{} OKAY ***********************".format(exp, run))
-                
+                print("*********************** {}-{} OKAY ***********************".format(exp, run)) 
             except:
                 print("{}-{} not avaiable".format(exp, run))
                 continue
             sub_events = self.df_val.query("exp == '{}' and run == '{}'".format(exp,run))["event"]
-#             print(sub_events)
-#             print("path", path)
             labels, eventIdxs = load_cxi_labels_yxhw( path, total_size=-1 )
             labels = [labels[i] for i in range(len(labels)) if eventIdxs[i] in sub_events]
             eventIdxs = [eventIdxs[i] for i in range(len(eventIdxs)) if eventIdxs[i] in sub_events]
             print("labels", len(labels), "eventIdxs", len(eventIdxs))
             n_iters = int( np.ceil( len(labels) / float(macro_batch_size) ) )
             print("# iterations", n_iters)
-
             for j in range(n_iters):
                 idx_offset = j * macro_batch_size
                 if j == (n_iters-1):
@@ -120,8 +116,6 @@ class Trainer(object):
         # training
         #self.nets[0].set_writer(project_name=self.params["project_name"], parameters=self.params)
         #self.nets[0].writer.add_scalar('lr', my_lr, self.nets[0].model.seen)
-        
-        
         while not self.psana_ready:
             self.exp, self.run, self.path = self.df_train.sample(1).iloc[0][["exp", "run", "path"]]
             #self.exp = "cxic0415"
@@ -142,7 +136,7 @@ class Trainer(object):
                 print("{}-{} not avaiable".format(self.exp, self.run))
                 continue  
             if skip_trained:
-                log_filename = os.path.join("/reg/d/psdm/cxi/cxic0415/res/liponan/peaknet4antfarm/train_log", "{}_{}".format(exp,run))
+                log_filename = os.path.join("/reg/d/psdm/cxi/cxic0415/res/liponan/peaknet4antfarm/train_log", "{}_{}".format(self.exp, self.run))
                 if os.path.isfile( log_filename ):
                     continue
                 else:
@@ -151,23 +145,18 @@ class Trainer(object):
             self.psana_ready = True 
             self.j_iter = 0
             print("end of psana test")
-                
         #self.net.writer.add_text("EXP-RUN", "{}-{}".format(exp, run), self.net.model.seen)
-
         if not self.cxi_ready:
             self.labels, self.eventIdxs = load_cxi_labels_yxhw( self.path, total_size=-1 )
             print("labels", len(self.labels), "eventIdxs", len(self.eventIdxs))
             self.n_iters = int( np.floor( len(self.labels) / float(macro_batch_size) ) )
             print("# iterations", self.n_iters)
-
         self.net.set_optimizer(adagrad=(algo=="adagrad"), lr=my_lr )
-            
         for j in range(self.j_iter, self.j_iter+n_train_push): # was n_iters
             self.delta = n_train_push
             if self.j_iter == self.n_iters-1:
                 self.psana_ready = False
                 self.cxi_ready = False    
-                
             idx_offset = j * macro_batch_size
             n = macro_batch_size
             batch_imgs = psana_img_loader(self.eventIdxs, idx_offset, macro_batch_size, self.det, self.this_run, self.times)
@@ -176,12 +165,10 @@ class Trainer(object):
             batch_imgs[ batch_imgs < 0 ] = 0
             batch_imgs = batch_imgs / batch_imgs.max()
             self.net.train( batch_imgs, batch_labels, mini_batch_size=macro_batch_size*32 )
-            self.grad = self.net.getGrad()
-                
+            self.grad = self.net.getGrad()      
             if self.net.model.seen % n_save == 0:
                 self.net.snapshot(batch_imgs, batch_labels, tag="antfarm_zmq_trainer")
-                print("snapshot saved")
-                    
+                print("snapshot saved")        
             if self.net.model.seen in n_policy:
                 my_lr /= 10.0
                 self.net.writer.add_scalar('lr', my_lr, self.net.model.seen)
